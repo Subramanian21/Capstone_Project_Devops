@@ -53,5 +53,11 @@ jobs:
           command: |
             docker push $dockerpath:$VERSION
     
-    
+workflows:
+  default:
+    jobs:
+      - build-app
+      - build_and_publish_docker_image:
+          requires:
+            - build-app
     
