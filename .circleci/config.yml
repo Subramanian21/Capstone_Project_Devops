@@ -1,7 +1,12 @@
 version: 2.1
 
+orbs:
+  kubernetes: circleci/kubernetes@0.12.0
+  aws-cli: circleci/aws-cli@2.0
+  aws-eks: circleci/aws-eks@0.2.3
+  
 jobs:
-  build-app:
+  build_app:
     docker:
       - image: cimg/python:3.8.11
     working_directory: ~/repo
@@ -53,103 +58,66 @@ jobs:
           name: push image
           command: |
             docker push $dockerpath
+            
+  create_cluster:
+    executor: aws-eks/python3
+    parameters:
+      cluster-name:
+        description: |
+          Name of the EKS cluster
+        type: string
+        default: hello-app
+    steps:
+      - run:
+          name: Install the eksctl tool
+          command: |
+            if which eksctl > /dev/null; then
+              echo "eksctl is already installed"
+              exit 0
+            fi
+            mkdir -p eksctl_download
+            curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C eksctl_download
+            chmod +x eksctl_download/eksctl
+            sudo mv eksctl_download/eksctl /usr/local/bin/
+            rmdir eksctl_download
+      - aws-eks/install-aws-iam-authenticator:
+          release-tag: ''
+      - aws-eks/create-cluster:
+          cluster-name: capstone-hello-app
+          node-type: t2.small
           
-  create_eks_cluster:
-    docker:
-      - image: cimg/base:stable
+  test-cluster:
+    executor: aws-eks/python3
+    parameters:
+      cluster-name:
+        description: |
+          Name of the EKS cluster
+        type: string
     steps:
-      - checkout
+      - kubernetes/install
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: capstone-hello-app
       - run:
-          name: install aws cli
           command: |
-            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-            sudo unzip awscliv2.zip
-            sudo ./aws/install
-            aws --version
-            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-            aws configure set region $AWS_REGION
-      - run:
-          name: install-eksctl
-          command: |
-            curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
-            sudo mv /tmp/eksctl /usr/local/bin
-            eksctl version
-      - run:
-          name: create cluster
-          command: |
-            eksctl create cluster --config-file=cluster.yml
-      - run:
-          name: destroy cluster
-          when: on_fail
-          command: |
-            eksctl delete cluster --name $CLUSTER_NAME
-            
-  deploy_kubernetes_app:
-    docker:
-      - image: cimg/base:stable
-    steps:
-      - checkout
-      - run:
-          name: install aws cli
-          command: |
-            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-            sudo unzip awscliv2.zip
-            sudo ./aws/install
-            sudo aws --version
-            sudo aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-            sudo aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-            sudo aws configure set region $AWS_REGION
-      - run:
-          name: install-kubectl
-          command: |
-            curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
-            chmod +x ./kubectl
-            sudo mv ./kubectl /usr/local/bin
-      - run:
-          name: connect to eks cluster
-          command: | 
-            aws eks --region us-east-1 update-kubeconfig --name $CLUSTER_NAME
-            kubectl get svc
-      - run: 
-          name: deploy app
-          command: |
-            kubectl apply -f deployment.yml 
-      - run:
-          name: watch rollout
-          command: | 
-            kubectl rollout status deployment.apps/udacity-capstone-deployment
-      - run:
-          name: rolling update
-          command: |
-            kubectl set image deployment.apps/udacity-capstone-deployment udacity-capstone=$dockerpath
-      - run:
-          name: watch rollout
-          command: | 
-            kubectl rollout status deployment.apps/udacity-capstone-deployment
-      - run:
-          name: list kubectl resources
-          command: |
-            echo "List Deployments:"
-            kubectl get deployments
-            echo ""
-            echo "List Services:"
-            kubectl get svc
-            echo ""
-            echo "List Pods:"
+            kubectl get services
             kubectl get pods
-            
+            kubectl describe pods
+            kubectl get nodes
+            kubectl get deployment
+            kubectl get services -o wide
+          name: Test cluster
+          
 workflows:
   default:
     jobs:
-      - build-app
+      - build_app
       - build_and_publish_docker_image:
           requires:
             - build-app
-      - create_eks_cluster:
+      - create_cluster:
           requires:
             - build_and_publish_docker_image
-      - deploy_kubernetes_app:
+      - cluster:
           requires:
-            - create_eks_cluster
+            - create_cluster
     
