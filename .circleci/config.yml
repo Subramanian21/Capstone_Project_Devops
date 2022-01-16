@@ -79,7 +79,7 @@ jobs:
       - aws-eks/create-cluster:
           cluster-name: capstone-hello-app
           aws-region: us-west-2
-          node-type: t2.small
+          node-type: t2.medium
             
   deploy-application:
     executor: aws-eks/python3
