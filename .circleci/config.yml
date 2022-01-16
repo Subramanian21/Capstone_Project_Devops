@@ -39,11 +39,12 @@ jobs:
       - run: 
           name: build image
           command: |
-            docker build -t $dockerpath:$VERSION .
+            echo "Docker ID and Image: $dockerpath"
+            docker build -t $dockerpath .
       - run: 
           name: tag image
           command: |
-            docker tag $dockerpath:$VERSION $dockerpath:$VERSION
+            docker tag $dockerpath $dockerpath
       - run:
           name: login to dockerhub
           command: |
@@ -51,7 +52,7 @@ jobs:
       - run:
           name: push image
           command: |
-            docker push $dockerpath:$VERSION
+            docker push $dockerpath
     
 workflows:
   default:
