@@ -102,7 +102,7 @@ workflows:
       - build_app
       - build_and_publish_docker_image:
           requires:
-            - build-app
+            - build_app
       - create_cluster:
           requires:
             - build_and_publish_docker_image
