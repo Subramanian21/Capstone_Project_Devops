@@ -66,9 +66,9 @@ jobs:
             sudo unzip awscliv2.zip
             sudo ./aws/install
             sudo aws --version
-            aws configure set $AWS_ACCESS_KEY_ID
-            aws configure set $AWS_SECRET_ACCESS_KEY
-            aws configure set region $AWS_REGION
+            sudo aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+            sudo aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+            sudo aws configure set region $AWS_REGION
       - run:
           name: install-eksctl
           command: |
@@ -104,9 +104,9 @@ jobs:
             sudo unzip awscliv2.zip
             sudo ./aws/install
             sudo aws --version
-            aws configure set $AWS_ACCESS_KEY_ID
-            aws configure set $AWS_SECRET_ACCESS_KEY
-            aws configure set region $AWS_REGION
+            sudo aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+            sudo aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+            sudo aws configure set region $AWS_REGION
       - run:
           name: install-kubectl
           command: |
