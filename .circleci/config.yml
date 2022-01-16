@@ -78,7 +78,14 @@ jobs:
       - run:
           name: create cluster
           command: |
-            sudo eksctl create cluster --config-file=cluster.yml
+            sudo aws eks --region us-east-1 describe-cluster --name $CLUSTER_NAME > /dev/null
+            if [ $? -eq 0 ]
+            then
+              echo "Cluster already exists"
+            else
+              echo "Create Cluster"
+              sudo eksctl create cluster --config-file=cluster.yml
+            fi 
       - run:
           name: destroy cluster
           when: on_fail
@@ -112,7 +119,7 @@ jobs:
       - run:
           name: connect to eks cluster
           command: | 
-            sudo aws eks --region us-east-1 update-kubeconfig --name hello-app
+            sudo aws eks --region us-east-1 update-kubeconfig --name $CLUSTER_NAME
             sudo kubectl get svc
       - run: 
           name: deploy app
