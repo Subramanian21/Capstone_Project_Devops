@@ -59,42 +59,31 @@ jobs:
           command: |
             docker push $dockerpath
             
-  create_cluster:
+  deploy-application:
     executor: aws-eks/python3
     steps:
-      - run:
-          name: Install the eksctl tool
-          command: |
-            if which eksctl > /dev/null; then
-              echo "eksctl is already installed"
-              exit 0
-            fi
-            mkdir -p eksctl_download
-            curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C eksctl_download
-            chmod +x eksctl_download/eksctl
-            sudo mv eksctl_download/eksctl /usr/local/bin/
-            rmdir eksctl_download
-      - aws-eks/install-aws-iam-authenticator:
-          release-tag: ''
-      - aws-eks/create-cluster:
-          cluster-name: capstone-hello-app
-          node-type: t2.small
-          
-  test-cluster:
-    executor: aws-eks/python3
-    steps:
-      - kubernetes/install
+      - checkout
       - aws-eks/update-kubeconfig-with-authenticator:
           cluster-name: capstone-hello-app
-      - run:
-          command: |
-            kubectl get services
-            kubectl get pods
-            kubectl describe pods
-            kubectl get nodes
-            kubectl get deployment
-            kubectl get services -o wide
-          name: Test cluster
+          install-kubectl: true
+          aws-region: us-west-2
+      - kubernetes/create-or-update-resource:
+          resource-file-path: deployment.yml
+          get-rollout-status: true
+          resource-name: deployment/capstone-hello-app
+          
+  test-application:
+        executor: aws-eks/python3
+        steps:
+          - aws-eks/update-kubeconfig-with-authenticator:
+              cluster-name: capstone-hello-app
+              install-kubectl: true
+              aws-region: us-west-2
+          - run:
+              name: Wait for service to be ready
+              command: |
+                kubectl get pods
+                kubectl get services
           
 workflows:
   default:
@@ -103,10 +92,13 @@ workflows:
       - build_and_publish_docker_image:
           requires:
             - build_app
-      - create_cluster:
+      - aws-eks/create-cluster:
+          cluster-name: capstone-hello-app
+          aws-region: us-west-2
+      - deploy-application:
           requires:
-            - build_and_publish_docker_image
-      - test-cluster:
+            - aws-eks/create-cluster
+      - test-application:
           requires:
-            - create_cluster
+            - deploy-application
     
