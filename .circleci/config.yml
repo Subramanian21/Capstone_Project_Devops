@@ -117,7 +117,7 @@ workflows:
       - create_cluster:
           requires:
             - build_and_publish_docker_image
-      - cluster:
+      - test-cluster:
           requires:
             - create_cluster
     
