@@ -2,10 +2,10 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
-  name: hello-app
+  name: udacity-capstone-hello-app
   region: us-east-1
   tags:
-    project: udacity-capstone
+    project: udacity-capstone-hello-app
 
 iam:
   withOIDC: true

@@ -65,32 +65,32 @@ jobs:
             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
             sudo unzip awscliv2.zip
             sudo ./aws/install
-            sudo aws --version
-            sudo aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-            sudo aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-            sudo aws configure set region $AWS_REGION
+            aws --version
+            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+            aws configure set region $AWS_REGION
       - run:
           name: install-eksctl
           command: |
             curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
             sudo mv /tmp/eksctl /usr/local/bin
-            sudo eksctl version
+            eksctl version
       - run:
           name: create cluster
           command: |
-            sudo aws eks --region us-east-1 describe-cluster --name $CLUSTER_NAME > /dev/null
+            aws eks --region us-east-1 describe-cluster --name $CLUSTER_NAME > /dev/null
             if [ $? -eq 0 ]
             then
               echo "Cluster already exists"
             else
               echo "Create Cluster"
-              sudo eksctl create cluster --config-file=cluster.yml
+              eksctl create cluster --config-file=cluster.yml
             fi 
       - run:
           name: destroy cluster
           when: on_fail
           command: |
-            sudo eksctl delete cluster --name $CLUSTER_NAME
+            eksctl delete cluster --name $CLUSTER_NAME
             
   deploy_kubernetes_app:
     docker:
@@ -116,35 +116,35 @@ jobs:
       - run:
           name: connect to eks cluster
           command: | 
-            sudo aws eks --region us-east-1 update-kubeconfig --name $CLUSTER_NAME
-            sudo kubectl get svc
+            aws eks --region us-east-1 update-kubeconfig --name $CLUSTER_NAME
+            kubectl get svc
       - run: 
           name: deploy app
           command: |
-            sudo kubectl apply -f deployment.yml 
+            kubectl apply -f deployment.yml 
       - run:
           name: watch rollout
           command: | 
-            sudo kubectl rollout status deployment.apps/udacity-capstone-deployment
+            kubectl rollout status deployment.apps/udacity-capstone-deployment
       - run:
           name: rolling update
           command: |
-            sudo kubectl set image deployment.apps/udacity-capstone-deployment udacity-capstone=$dockerpath
+            kubectl set image deployment.apps/udacity-capstone-deployment udacity-capstone=$dockerpath
       - run:
           name: watch rollout
           command: | 
-            sudo kubectl rollout status deployment.apps/udacity-capstone-deployment
+            kubectl rollout status deployment.apps/udacity-capstone-deployment
       - run:
           name: list kubectl resources
           command: |
             echo "List Deployments:"
-            sudo kubectl get deployments
+            kubectl get deployments
             echo ""
             echo "List Services:"
-            sudo kubectl get svc
+            kubectl get svc
             echo ""
             echo "List Pods:"
-            sudo kubectl get pods
+            kubectl get pods
             
 workflows:
   default:
