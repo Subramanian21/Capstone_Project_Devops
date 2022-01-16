@@ -1,0 +1,57 @@
+version: 2.1
+
+jobs:
+  build-app:
+    docker:
+      - image: cimg/python:3.8.11
+    working_directory: ~/repo
+    steps:
+      - checkout
+    - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "requirements.txt" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+    - run:
+          name: Install dependencies
+          command: |
+            make setup
+            source devops/bin/activate
+            make install
+    - run:
+          name: Lint source files
+          command: |
+            source devops/bin/activate
+            make lint
+    - save_cache:
+          paths:
+            - ./devops
+          key: v1-dependencies-{{ checksum "requirements.txt" }}
+          
+  build_and_publish_docker_image:
+    docker:
+      - image: cimg/python:3.8.11
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 20.10.7
+      - run: 
+          name: build image
+          command: |
+            docker build -t $dockerpath:$VERSION .
+      - run: 
+          name: tag image
+          command: |
+            docker tag $dockerpath:$VERSION $dockerpath:$VERSION
+      - run:
+          name: login to dockerhub
+          command: |
+            docker login -u $dockerId -p $dockerPass
+      - run:
+          name: push image
+          command: |
+            docker push $dockerpath:$VERSION
+    
+    
+    
