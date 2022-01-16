@@ -95,6 +95,8 @@ workflows:
       - aws-eks/create-cluster:
           cluster-name: capstone-hello-app
           aws-region: us-west-2
+          requires:
+            - build_and_publish_docker_image
       - deploy-application:
           requires:
             - aws-eks/create-cluster
